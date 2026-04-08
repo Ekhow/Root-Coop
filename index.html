@@ -79,7 +79,7 @@
             padding-right: 10px;
         }
 
-        /* --- PAGE MAPS PLEIN ÉCRAN --- */
+        /* --- PAGE MAPS --- */
         #maps { 
             max-width: 100%; 
             height: 100%; 
@@ -87,8 +87,7 @@
             position: relative;
         }
         
-        /* Rideau de verrouillage pour la map */
-        #map-lock {
+        #map-lock, #map-offline {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(11, 15, 19, 0.98);
@@ -96,7 +95,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 20;
+            z-index: 25;
             text-align: center;
         }
 
@@ -141,7 +140,6 @@
         .dot { height: 8px; width: 8px; background-color: var(--accent-color); border-radius: 50%; }
         .dot.offline { background-color: var(--offline-red); }
 
-        /* ACCORDÉON MODS */
         .mod-list-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; margin-top: 20px; }
         .mod-card { background: #0d1117; border-radius: 8px; border-left: 4px solid var(--accent-color); transition: 0.3s; cursor: pointer; text-align: left; }
         .mod-header { padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
@@ -157,10 +155,10 @@
     <header>
         <img src="rc_logo.png" alt="ROOT. COOP" class="logo">
         <nav>
-            <button onclick="showPage('home')" class="nav-btn active" id="btn-home">Accueils</button>
+            <button onclick="showPage('home')" class="nav-btn active" id="btn-home">Accueil</button>
             <button onclick="showPage('modpacks')" class="nav-btn" id="btn-modpacks">Modpacks</button>
-            <button onclick="showPage('details')" class="nav-btn" id="btn-details">Détails</button>
             <button onclick="showPage('maps')" class="nav-btn" id="btn-maps">Maps</button>
+            <button onclick="showPage('details')" class="nav-btn" id="btn-details">Détails</button>
         </nav>
     </header>
 
@@ -194,8 +192,7 @@
         <section id="details" class="page">
             <div class="card">
                 <h1>Liste des <span class="highlight">Mods</span></h1>
-                <div class="mod-list-container" id="mod-container">
-                    </div>
+                <div class="mod-list-container" id="mod-container"></div>
             </div>
         </section>
 
@@ -203,8 +200,15 @@
             <div id="map-lock">
                 <span style="font-size: 3rem; margin-bottom: 10px;">🔒</span>
                 <h1>Carte <span class="highlight">Verrouillée</span></h1>
-                <p style="color: var(--nav-idle);">Disponible ce dimanche.</p>
+                <p style="color: var(--nav-idle);">Disponible lors de l'ouverture officielle.</p>
             </div>
+
+            <div id="map-offline">
+                <span style="font-size: 3rem; margin-bottom: 10px;">💤</span>
+                <h1>Serveur <span style="color: var(--offline-red);">Hors-ligne</span></h1>
+                <p style="color: var(--nav-idle);">La carte est indisponible car le serveur est fermé.</p>
+            </div>
+
             <div class="map-container">
                 <iframe src="http://86.238.106.127:25500"></iframe>
             </div>
@@ -240,6 +244,7 @@
 
         function initMods() {
             const container = document.getElementById('mod-container');
+            container.innerHTML = "";
             modsData.forEach(mod => {
                 container.innerHTML += `
                     <div class="mod-card" onclick="toggleMod(this)">
@@ -275,38 +280,45 @@
                 .then(r => r.json()).then(data => {
                     const dot = document.getElementById('status-dot');
                     const text = document.getElementById('status-text');
+                    const mapOffline = document.getElementById('map-offline');
+                    
                     if (data.online) {
                         dot.classList.remove('offline');
                         text.innerText = "En ligne (" + data.players.online + "/" + data.players.max + ")";
+                        mapOffline.style.display = 'none';
                     } else {
                         dot.classList.add('offline');
                         text.innerText = "Hors-ligne";
+                        mapOffline.style.display = 'flex';
                     }
-                }).catch(() => { document.getElementById('status-text').innerText = "Vérification..."; });
+                }).catch(() => { 
+                    document.getElementById('status-text').innerText = "Vérification..."; 
+                });
         }
 
         function updateCountdownAndLock() {
             const now = new Date().getTime();
+            const targetDate = new Date("April 7, 2026 21:30:00").getTime();
             
-            // Verrouillage Map (Dimanche 12 Avril 2026)
-            const mapRelease = new Date("April 12, 2026 21:30:00").getTime();
-            document.getElementById('map-lock').style.display = (mapRelease - now > 0) ? 'flex' : 'none';
+            // Verrouillage Map
+            const isLocked = (targetDate - now > 0);
+            document.getElementById('map-lock').style.display = isLocked ? 'flex' : 'none';
 
-            // Timer Ouverture (Dimanche 12 Avril 2026 22:30)
-            const targetDate = new Date("April 12, 2026 21:30:00").getTime();
+            // Timer Accueil
             const distance = targetDate - now;
+            const timerContainer = document.getElementById("countdown-container");
             if (distance > 0) {
-                document.getElementById("countdown-container").style.display = "block";
+                timerContainer.style.display = "block";
                 document.getElementById("countdown-timer").innerHTML = "J-" + Math.floor(distance / (1000 * 60 * 60 * 24));
             } else {
-                document.getElementById("countdown-container").style.display = "none";
+                timerContainer.style.display = "none";
             }
         }
 
         initMods();
         checkServerStatus();
         updateCountdownAndLock();
-        setInterval(checkServerStatus, 30000);
+        setInterval(checkServerStatus, 10000);
         setInterval(updateCountdownAndLock, 60000);
     </script>
 </body>
